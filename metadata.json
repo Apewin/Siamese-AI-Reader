@@ -1,0 +1,5 @@
+{
+  "name": "AI Handwriting Grader",
+  "description": "An application to help teachers grade handwritten papers by using OCR to recognize student handwriting and comparing it against a provided solution using Gemini.",
+  "requestFramePermissions": []
+}
