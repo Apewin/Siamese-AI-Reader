@@ -38,6 +38,18 @@ body {
   text-align: center;
 }
 
+.app-logo {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 1rem;
+  border: 3px solid var(--primary);
+  padding: 2px;
+  background: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
 .app-header h1 {
   font-size: 2.5rem;
   font-weight: 800;

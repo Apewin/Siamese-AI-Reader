@@ -1,5 +1,5 @@
 {
-  "name": "AP FRQ AI Grader",
+  "name": "Siamese",
   "description": "A powerful tool to grade handwritten AP Free Response Questions using Google Gemini models.",
   "requestFramePermissions": []
 }

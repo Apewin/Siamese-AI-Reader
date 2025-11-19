@@ -296,7 +296,17 @@ export default function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>AP FRQ <span>AI Grader</span></h1>
+        <img 
+          src="./siamese.png" 
+          alt="Siamese Cat Logo" 
+          className="app-logo" 
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = "https://placekitten.com/200/200";
+            target.onerror = null;
+          }}
+        />
+        <h1>Siamese <span>AI Grader</span></h1>
         <p>Upload answers and rubrics to grade instantly.</p>
         
         <div className="model-selector-container">

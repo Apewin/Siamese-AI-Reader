@@ -1,5 +1,4 @@
-
-# Siamese-An AI tool for Teacher read free-respond questions
+# Siamese AI Grader
 
 This is a modern React web application that uses **Google Gemini** to grade handwritten AP Free Response Questions (FRQs).
 
@@ -9,7 +8,7 @@ This is a modern React web application that uses **Google Gemini** to grade hand
 - **Handwriting Recognition**: Instantly transcribes student handwriting from images using multimodal capabilities.
 - **AI Grading**: Evaluates the answer against a specific rubric with Thinking Config enabled for reasoning.
 - **Detailed Feedback**: Provides a total score, detailed rubric breakdown, and qualitative feedback.
-- **File Support**: Upload Student Responses and Answer Keys as Images or PDFs.
+- **File Support**: Upload Student Responses and Answer Keys as Images, HEIC files, or PDFs.
 - **Privacy**: No backend required; runs entirely in the browser using the Gemini API.
 
 ## Setup
@@ -31,6 +30,6 @@ This is a modern React web application that uses **Google Gemini** to grade hand
 ## Usage
 
 1.  **Select Model**: Choose between Gemini 3 Pro or Gemini 2.5 Flash from the header dropdown.
-2.  **Upload**: Drag and drop an image/PDF of the handwritten student response.
+2.  **Upload**: Drag and drop an image/PDF/HEIC of the handwritten student response.
 3.  **Configure**: Enter the Question and upload or type the Grading Rubric.
 4.  **Grade**: Click "Start Grading" and view the detailed report.
