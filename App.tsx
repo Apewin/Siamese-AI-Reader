@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { GoogleGenAI, Schema, Type } from "@google/genai";
 import { GradingResult } from './types';
@@ -11,6 +10,8 @@ const MODELS = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Fast & Efficient)' },
 ];
 
+const ACCEPTED_TYPES = "image/*,application/pdf,.heic,.HEIC";
+
 export default function App() {
   // --- State ---
   
@@ -20,6 +21,7 @@ export default function App() {
   // 1. Student Response (Image/PDF)
   const [studentFile, setStudentFile] = useState<File | null>(null);
   const [studentPreview, setStudentPreview] = useState<string | null>(null);
+  const [isDraggingStudent, setIsDraggingStudent] = useState(false);
 
   // 2. Question Context
   const [question, setQuestion] = useState<string>(DEFAULT_QUESTION);
@@ -29,6 +31,7 @@ export default function App() {
   const [rubricText, setRubricText] = useState<string>(DEFAULT_RUBRIC_TEXT);
   const [rubricFile, setRubricFile] = useState<File | null>(null);
   const [rubricPreview, setRubricPreview] = useState<string | null>(null);
+  const [isDraggingRubric, setIsDraggingRubric] = useState(false);
   
   // 4. App State
   const [isLoading, setIsLoading] = useState(false);
@@ -41,25 +44,71 @@ export default function App() {
 
   // --- Helpers ---
 
+  const processFile = (
+    file: File | undefined, 
+    setFile: (f: File) => void, 
+    setPreview: (s: string | null) => void
+  ) => {
+    if (!file) return;
+
+    // Validate type loosely (allow pdf, images, and heic extension)
+    const isHeic = file.name.toLowerCase().endsWith('.heic');
+    const isValidType = file.type.startsWith('image/') || file.type === 'application/pdf' || isHeic;
+
+    if (!isValidType) {
+      setError("Unsupported file type. Please upload an Image, PDF, or HEIC file.");
+      return;
+    }
+
+    setFile(file);
+    setResult(null);
+    setError(null);
+
+    if (file.type.startsWith('image/') && !isHeic) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      // For PDF and HEIC, we don't show a standard image preview
+      setPreview(null); 
+    }
+  };
+
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>, 
     setFile: (f: File) => void, 
     setPreview: (s: string | null) => void
   ) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFile(file);
-      setResult(null);
-      setError(null);
+    processFile(e.target.files?.[0], setFile, setPreview);
+  };
 
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => setPreview(reader.result as string);
-        reader.readAsDataURL(file);
-      } else {
-        // For PDFs, we don't show a visual preview, just a generic icon
-        setPreview(null); 
-      }
+  // --- Drag & Drop Handlers ---
+
+  const handleDragOver = (e: React.DragEvent, setIsDragging: (b: boolean) => void) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent, setIsDragging: (b: boolean) => void) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (
+    e: React.DragEvent, 
+    setIsDragging: (b: boolean) => void,
+    setFile: (f: File) => void,
+    setPreview: (s: string | null) => void
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      processFile(files[0], setFile, setPreview);
     }
   };
 
@@ -69,10 +118,17 @@ export default function App() {
       reader.onloadend = () => {
         if (typeof reader.result === 'string') {
           const base64Data = reader.result.split(',')[1];
+          
+          // Fix MIME type for HEIC if browser doesn't detect it
+          let mimeType = file.type;
+          if (file.name.toLowerCase().endsWith('.heic')) {
+            mimeType = 'image/heic';
+          }
+
           resolve({
             inlineData: {
               data: base64Data,
-              mimeType: file.type,
+              mimeType: mimeType,
             },
           });
         } else {
@@ -95,7 +151,6 @@ export default function App() {
       setError("Please enter the Question Prompt.");
       return;
     }
-    // Validation based on mode
     if (rubricMode === 'text' && !rubricText.trim()) {
       setError("Please enter the grading rubric text.");
       return;
@@ -112,7 +167,6 @@ export default function App() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-      // Prepare parts
       const parts: any[] = [];
 
       // 1. Add Student Answer File
@@ -142,7 +196,6 @@ export default function App() {
           3. Grade strictly based on the evidence in the student's response.
         `;
       } else {
-        // Text Rubric Mode
         prompt = `
           Role: You are an expert AP Exam Reader.
           
@@ -159,7 +212,6 @@ export default function App() {
         `;
       }
 
-      // Schema definition
       const responseSchema: Schema = {
         type: Type.OBJECT,
         properties: {
@@ -199,7 +251,6 @@ export default function App() {
 
       let jsonText = response.text;
       if (jsonText) {
-        // Clean up any markdown formatting that might slip through
         jsonText = jsonText.replace(/^```json\s*/, "").replace(/\s*```$/, "");
         const parsedResult = JSON.parse(jsonText) as GradingResult;
         setResult(parsedResult);
@@ -216,6 +267,31 @@ export default function App() {
   };
 
   const isReady = studentFile && question.trim() && (rubricMode === 'text' ? rubricText.trim() : rubricFile);
+
+  // Render helper for file preview
+  const renderFilePreview = (file: File, preview: string | null, isSmall = false) => {
+    const isHeic = file.name.toLowerCase().endsWith('.heic');
+    
+    if (file.type.startsWith('image/') && !isHeic && preview) {
+      return <img src={preview} alt="Preview" className={isSmall ? "thumb" : ""} />;
+    }
+    
+    // Generic icons for PDF or HEIC
+    const label = isHeic ? "HEIC" : "PDF";
+    const iconClass = isSmall ? "pdf-icon-small" : "pdf-icon-box"; // New class for large preview box
+    
+    if (isSmall) {
+      return <div className={iconClass}>{label}</div>;
+    }
+    
+    return (
+      <div className="pdf-icon">
+         {/* Reusing pdf-icon class structure but changing label */}
+        <span>{label}</span>
+        <p>{file.name}</p>
+      </div>
+    );
+  };
 
   return (
     <div className="app-container">
@@ -246,27 +322,23 @@ export default function App() {
           <div className="card input-card">
             <h2>1. Student Response</h2>
             <div 
-              className={`drop-zone ${studentFile ? 'has-file' : ''}`}
+              className={`drop-zone ${studentFile ? 'has-file' : ''} ${isDraggingStudent ? 'drag-active' : ''}`}
               onClick={() => studentInputRef.current?.click()}
+              onDragOver={(e) => handleDragOver(e, setIsDraggingStudent)}
+              onDragLeave={(e) => handleDragLeave(e, setIsDraggingStudent)}
+              onDrop={(e) => handleDrop(e, setIsDraggingStudent, setStudentFile, setStudentPreview)}
             >
               <input 
                 type="file" 
                 ref={studentInputRef} 
                 onChange={(e) => handleFileUpload(e, setStudentFile, setStudentPreview)} 
-                accept="image/*,application/pdf" 
+                accept={ACCEPTED_TYPES}
                 hidden 
               />
               
               {studentFile ? (
                 <div className="file-preview">
-                  {studentFile.type.startsWith('image') && studentPreview ? (
-                    <img src={studentPreview} alt="Student Answer" />
-                  ) : (
-                    <div className="pdf-icon">
-                      <span>PDF</span>
-                      <p>{studentFile.name}</p>
-                    </div>
-                  )}
+                  {renderFilePreview(studentFile, studentPreview)}
                   <button 
                     className="change-file-btn"
                     onClick={(e) => { e.stopPropagation(); studentInputRef.current?.click(); }}
@@ -277,7 +349,7 @@ export default function App() {
               ) : (
                 <div className="upload-placeholder">
                   <span className="icon">📄</span>
-                  <p>Upload Student Answer<br/><small>(Image or PDF)</small></p>
+                  <p>Drag & Drop Student Answer<br/><small>(Image, HEIC, or PDF)</small></p>
                 </div>
               )}
             </div>
@@ -326,23 +398,22 @@ export default function App() {
                 />
               ) : (
                 <div 
-                  className={`drop-zone small-drop-zone fade-in ${rubricFile ? 'has-file' : ''}`}
+                  className={`drop-zone small-drop-zone fade-in ${rubricFile ? 'has-file' : ''} ${isDraggingRubric ? 'drag-active' : ''}`}
                   onClick={() => rubricInputRef.current?.click()}
+                  onDragOver={(e) => handleDragOver(e, setIsDraggingRubric)}
+                  onDragLeave={(e) => handleDragLeave(e, setIsDraggingRubric)}
+                  onDrop={(e) => handleDrop(e, setIsDraggingRubric, setRubricFile, setRubricPreview)}
                 >
                   <input 
                     type="file" 
                     ref={rubricInputRef} 
                     onChange={(e) => handleFileUpload(e, setRubricFile, setRubricPreview)} 
-                    accept="image/*,application/pdf" 
+                    accept={ACCEPTED_TYPES}
                     hidden 
                   />
                    {rubricFile ? (
                     <div className="file-preview horizontal">
-                      {rubricFile.type.startsWith('image') && rubricPreview ? (
-                        <img src={rubricPreview} alt="Rubric" className="thumb" />
-                      ) : (
-                        <div className="pdf-icon-small">PDF</div>
-                      )}
+                      {renderFilePreview(rubricFile, rubricPreview, true)}
                       <div className="file-info">
                         <span className="filename">{rubricFile.name}</span>
                         <span className="change-link">Click to change</span>
@@ -351,7 +422,7 @@ export default function App() {
                   ) : (
                     <div className="upload-placeholder">
                       <span className="icon-small">🗝️</span>
-                      <p>Upload Rubric/Key<br/><small>(Image or PDF)</small></p>
+                      <p>Drag & Drop Rubric/Key<br/><small>(Image, HEIC, or PDF)</small></p>
                     </div>
                   )}
                 </div>
