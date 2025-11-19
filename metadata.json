@@ -1,5 +1,5 @@
 {
-  "name": "AI Handwriting Grader",
-  "description": "An application to help teachers grade handwritten papers by using OCR to recognize student handwriting and comparing it against a provided solution using Gemini.",
+  "name": "AP FRQ AI Grader",
+  "description": "A powerful tool to grade handwritten AP Free Response Questions using Google Gemini models.",
   "requestFramePermissions": []
 }

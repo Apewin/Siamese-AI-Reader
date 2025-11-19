@@ -1,3 +1,4 @@
+
 export interface ScoreItem {
     description: string;
     pointsAwarded: number;
@@ -9,5 +10,6 @@ export interface GradingResult {
     recognizedText: string;
     feedback: string;
     totalScore: number;
+    maxScore: number;
     scoreBreakdown: ScoreItem[];
 }
