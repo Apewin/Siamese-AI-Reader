@@ -1,3 +1,8 @@
+
+<img width="784" height="1340" alt="图片" src="https://github.com/user-attachments/assets/13ed8210-e5ee-4293-8ea7-c36f2feeddcc" />
+
+
+
 # Siamese AI Grader
 
 This is a modern React web application that uses **Google Gemini** to grade handwritten AP Free Response Questions (FRQs).
