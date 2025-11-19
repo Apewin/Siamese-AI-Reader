@@ -2,8 +2,8 @@ import React, { useState, useRef } from 'react';
 import { GoogleGenAI, Schema, Type } from "@google/genai";
 import { GradingResult } from './types';
 
-const DEFAULT_QUESTION = "Explain the concept of 'Federalism' in the context of the United States Constitution and provide one example of a power reserved for the states.";
-const DEFAULT_RUBRIC_TEXT = "1 point: Correct definition of Federalism (division of power between national and state governments).\n1 point: Correct example of a state power (e.g., education, driving laws, elections).";
+const DEFAULT_QUESTION = "";
+const DEFAULT_RUBRIC_TEXT = "";
 
 const MODELS = [
   { id: 'gemini-3-pro-preview', name: 'Gemini 3.0 Pro (Strongest Reasoning)' },
@@ -183,32 +183,36 @@ export default function App() {
         rubricContent = rubricText;
       }
 
-      // Strict AP Persona Prompt
+      // Strict AP Persona Prompt using user provided instructions
       const prompt = `
-        System Role: You are a strict, objective AP Exam Reader authorized by the College Board. Your sole purpose is to grade student responses against a specific Scoring Guideline (Rubric) with zero bias or hallucination.
+# AP FRQ Auto-Grader Prompt
 
-        Task: Evaluate the provided "Student Response" based strictly on the provided "Scoring Guidelines" for the given "Question".
+**System Role:**
+You are a strict, objective AP Exam Reader authorized by the College Board. Your sole purpose is to grade student responses against a specific Scoring Guideline (Rubric) with zero bias or hallucination.
 
-        Operational Rules (Strict Adherence Required):
-        1. Literal Keyword Matching: Do not infer intent. Points are awarded ONLY if the student explicitly states the required concepts, keywords, or logical steps defined in the rubric. "Close enough" is 0 points.
-        2. Differentiation of Task Verbs:
-           - "Identify": Award points for the correct answer only; explanations are irrelevant.
-           - "Explain/Justify": The correct answer alone gets 0 points. A logical linkage (premise → reasoning → conclusion) is required.
-        3. Contradiction Penalty: If a student provides the correct answer but follows it with incorrect reasoning or a contradictory statement, award 0 points.
-        4. Units & Formatting: For Math/Science subjects, deduct points if units are missing or incorrect where the rubric demands them.
-        5. Binary Scoring: Unless the rubric explicitly defines partial credit, treat every decision as Binary (0 or 1).
-        6. Evidence Requirement: You must cite the specific phrase in the Rubric that justifies every point awarded or denied.
+**Task:**
+Evaluate the provided "Student Response" based **strictly** on the provided "Scoring Guidelines" for the given "Question".
 
-        Input Data:
-        [Question Prompt]: "${question}"
-        [Scoring Guidelines]: "${rubricContent}"
-        [Student Response]: (See attached image/PDF)
+**Operational Rules (Strict Adherence Required):**
+1.  **Literal Keyword Matching:** Do not infer intent. Points are awarded ONLY if the student explicitly states the required concepts, keywords, or logical steps defined in the rubric. "Close enough" is 0 points.
+2.  **Differentiation of Task Verbs:**
+    * If the prompt asks to **"Identify"**: Award points for the correct answer only; explanations are irrelevant.
+    * If the prompt asks to **"Explain/Justify"**: The correct answer alone gets 0 points. A logical linkage (premise -> reasoning -> conclusion) is required.
+3.  **Contradiction Penalty:** If a student provides the correct answer but follows it with incorrect reasoning or a contradictory statement, award 0 points.
+4.  **Units & Formatting:** For Math/Science subjects, deduct points if units are missing or incorrect where the rubric demands them.
+5.  **Binary Scoring:** Unless the rubric explicitly defines partial credit (e.g., "1 point for X, 1 point for Y"), treat every decision as Binary (0 or 1).
+6.  **Evidence Requirement:** You must cite the specific phrase in the Rubric that justifies every point awarded or denied.
 
-        Output Requirement:
-        Output strictly in JSON format matching the provided schema. 
-        - 'recognizedText': Transcribe the student's handwriting exactly.
-        - 'scoreBreakdown': List every rubric criteria and the points awarded (0 or 1) vs max points.
-        - 'feedback': Provide critical feedback on exact errors (e.g., "Failed to label X-axis").
+**Input Data:**
+* **[Question Prompt]:** "${question}"
+* **[Scoring Guidelines]:** "${rubricContent}"
+* **[Student Response]:** (See attached image/PDF)
+
+**Output Requirement:**
+You must output the result strictly in JSON format matching the provided schema. 
+- Map the "Part [A/B/C] Analysis" details (Points, Rubric Match, Student Match, Reasoning) into the 'description' field of the 'scoreBreakdown' array so the user can see the detailed justification.
+- Map "Critical Feedback" to the 'feedback' field.
+- Map "Total Score" to 'totalScore'.
       `;
 
       const responseSchema: Schema = {
@@ -224,7 +228,7 @@ export default function App() {
             items: {
               type: Type.OBJECT,
               properties: {
-                description: { type: Type.STRING, description: "Rubric criterion description" },
+                description: { type: Type.STRING, description: "Detailed analysis including Rubric Match, Student Match, and Reasoning for this part." },
                 pointsAwarded: { type: Type.NUMBER, description: "Points given (usually 0 or 1)" },
                 maxPoints: { type: Type.NUMBER, description: "Max points for this item" },
               },
