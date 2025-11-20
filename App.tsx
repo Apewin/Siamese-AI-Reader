@@ -466,7 +466,7 @@ Output strict JSON matching this schema:
     
     return (
       <div className="pdf-icon">
-        <span>{label}</span>
+        <span style={{ fontSize: '4rem' }}>📄</span>
         <p>{file.name}</p>
         {pdfBadge}
       </div>

@@ -234,7 +234,7 @@ body {
 
 .pdf-icon {
   font-size: 3rem;
-  color: #ef4444;
+  /* color property removed here to avoid forced red text */
   text-align: center;
   padding: 2rem;
 }
